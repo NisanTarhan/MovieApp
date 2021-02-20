@@ -7,7 +7,6 @@ class MoviesApp {
             root,
             searchInput,
             searchForm,
-            yearHandler,
             yearSubmitter,
             yearFilter,
             genreFilter,
@@ -18,7 +17,6 @@ class MoviesApp {
 
         this.$searchInput = document.getElementById(searchInput)
         this.$searchForm = document.getElementById(searchForm)
-        this.yearHandler = yearHandler
         this.$yearSubmitter = document.getElementById(yearSubmitter)
         this.$yearFilter = document.getElementById(yearFilter)
 
@@ -48,43 +46,38 @@ class MoviesApp {
         this.$tbodyEl.innerHTML = moviesHTML
     }
 
-    generateFilters(filterTypeArray) {
-        function fillCategoryFilter(category, inputType, filterElement) {
-            let filterKeys = Object.keys(filterTypeArray)
+    generateFuncToFillFilterSection(filterTypeObject) {
+        function fillFilterSection(filterType, inputType, filterElement) {
+            let filterKeys = Object.keys(filterTypeObject)
 
             const filterArr = filterKeys
                 .map((item) => {
-                    return this.createInputElement(item, filterTypeArray[item], category, inputType)
+                    return this.createInputElement(item, filterTypeObject[item], filterType, inputType)
                 })
                 .join('')
             filterElement.innerHTML += filterArr
         }
 
-        return fillCategoryFilter.bind(this)
+        return fillFilterSection.bind(this)
     }
 
-    getValuesFromObject(category) {
-        let categorys = data.map((obj) => `${obj[category]}`)
-        return categorys.reduce(function (acc, category) {
-            if (!acc[category]) {
-                acc[category] = 0
+    getFiltersObjectWithAmountByType(filterType) {
+        let filters = data.map(item => item[filterType])
+        const amountOfFilterItem = filters.reduce((acc, curr) => {
+            if (!acc[curr]) {
+                acc[curr] = 0
             }
-            acc[category]++
+            acc[curr]++
             return acc
         }, {})
-    }
-    getGenres() {
-        let genres = this.getValuesFromObject('genre')
-
-        const genreFunction = this.generateFilters(genres)
-        genreFunction('genre', 'checkbox', this.$genreFilter)
+        return amountOfFilterItem
     }
 
-    getYears() {
-        let years = this.getValuesFromObject('year')
+    getFilters(filterType, inputType, filterElement) {
+        let filtersWithAmount = this.getFiltersObjectWithAmountByType(filterType)
 
-        const yearFunction = this.generateFilters(years)
-        yearFunction('year', 'radio', this.$yearFilter)
+        const fillFilter = this.generateFuncToFillFilterSection(filtersWithAmount)
+        fillFilter(filterType, inputType, filterElement)
     }
 
     reset(itemName) {
@@ -94,6 +87,9 @@ class MoviesApp {
         document.querySelectorAll(`input:checked`).forEach((item) => {
             if (item.name != itemName) item.checked = false
         })
+        if (itemName) {
+            this.$searchInput.value = '';
+        }
     }
 
     handleSearch() {
@@ -105,13 +101,13 @@ class MoviesApp {
                 .filter((movie) => {
                     return searchMovieByTitle(movie, searchValue)
                 })
-                .forEach(makeBgActive)
+            matchedMovies.forEach(makeBgActive)
             this.$searchInput.value = ''
         })
     }
 
-    handleCategoryFilter(elementToListen, elementName) {
-        elementToListen.addEventListener('click', () => {
+    handleFilterElementClick(buttonElement, elementName) {
+        buttonElement.addEventListener('click', () => {
             this.reset(elementName)
             const selectedElements = document.getElementsByName(elementName)
             selectedElements.forEach((element) => {
@@ -120,7 +116,7 @@ class MoviesApp {
                         .filter((movie) => {
                             return movie[elementName] === element.value
                         })
-                        .forEach(makeBgActive)
+                    matchedMovies.forEach(makeBgActive)
                 }
             })
         })
@@ -129,11 +125,11 @@ class MoviesApp {
     init() {
         this.fillTable()
         this.handleSearch()
-        this.getGenres()
-        this.getYears()
+        this.getFilters('genre', 'checkbox', this.$genreFilter)
+        this.getFilters('year', 'radio', this.$yearFilter)
 
-        this.handleCategoryFilter(this.$yearSubmitter, this.yearHandler)
-        this.handleCategoryFilter(this.$genreSubmitter, 'genre')
+        this.handleFilterElementClick(this.$yearSubmitter, 'year')
+        this.handleFilterElementClick(this.$genreSubmitter, 'genre')
     }
 }
 
@@ -141,7 +137,6 @@ let myMoviesApp = new MoviesApp({
     root: 'movies-table',
     searchInput: 'searchInput',
     searchForm: 'searchForm',
-    yearHandler: 'year',
     yearSubmitter: 'yearSubmitter',
     genreFilter: 'genre-filter',
     yearFilter: 'year-filter',
